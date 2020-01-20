@@ -1,5 +1,5 @@
 import sys, os
-from .overlap import get_overlap
+from .overlap import get_overlap, get_overlap_fraction
 from .bedIO import get_chroms, print_chroms
 import numpy as np
 def main():
