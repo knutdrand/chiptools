@@ -1,0 +1,9 @@
+import numpy as np
+from chiptools.overlap import get_overlap
+
+
+def test_overlap():
+    a = np.array([0, 20, 30, 70, 110, 130]).reshape((-1, 2))
+    b = np.array([5, 12, 35, 75, 105, 133]).reshape((-1, 2))
+    
+
