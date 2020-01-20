@@ -5,7 +5,6 @@ def get_overlap(x, ref):
     cum_sizes = np.insert(np.cumsum(ref[:, 1]-ref[:, 0]), 0, 0)
     idxs = np.searchsorted(np.ravel(ref), x)
     count_until = cum_sizes[idxs//2]
-    print(count_until)
     mask = idxs %2 == 1
     extra = x[mask]-np.ravel(ref)[idxs[mask]-1]
     count_until[mask] += extra

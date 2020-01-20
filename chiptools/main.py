@@ -3,7 +3,6 @@ from .overlap import get_overlap, get_overlap_fraction
 from .bedIO import get_chroms, print_chroms
 import numpy as np
 def main():
-    print(sys.argv)
     if sys.argv[1] == "overlap":
         data_a = get_chroms(open(sys.argv[2]))
         data_b = get_chroms(open(sys.argv[3]))
