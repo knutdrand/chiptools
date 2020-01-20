@@ -12,6 +12,10 @@ def get_overlap(x, ref):
     return np.diff(count_until.reshape((-1, 2)))
     # count_until[mask] += x[mask]-
     
+def get_overlap_fraction(x, ref):
+    overlap = get_overlap(x, ref):
+    sizes = np.diff(x)
+    return overlap/sizes
 
 def _get_overlap(coords_a, coords_b):
     thr = max(coords_a[-1, -1], coords_b[-1,-1])+10
