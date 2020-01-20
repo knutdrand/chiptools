@@ -13,7 +13,7 @@ def get_overlap(x, ref):
     # count_until[mask] += x[mask]-
     
 def get_overlap_fraction(x, ref):
-    overlap = get_overlap(x, ref):
+    overlap = get_overlap(x, ref)
     sizes = np.diff(x)
     return overlap/sizes
 
