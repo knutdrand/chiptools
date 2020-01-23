@@ -1,4 +1,6 @@
 from collections import defaultdict
+from .bedgraph import BedGraph
+
 import numpy as np
 dtype= [('start', np.unicode_, 16), ('grades', np.float64, (2,))]
 
@@ -15,3 +17,18 @@ def print_chroms(chroms):
     for chrom, lines in chroms.items():
         for line in lines:
             print(chrom+"\t"+"\t".join(str(c) for c in line))
+
+def read_bedgraphs(lines):
+    cur_chrom = None
+    cur_idxs, cur_values = ([], [])
+    for line in lines:
+        chrom, start, _, value = line.split("\t", 4)[:4]
+        if chrom != cur_chrom:
+            if cur_chrom is not None:
+                yield (cur_chrom, BedGraph(cur_idxs, cur_values))
+            cur_chrom = chrom
+            cur_idxs, cur_values = ([], [])
+        cur_idxs.append(int(start))
+        cur_values.append(float(value))
+    if cur_idxs:
+        yield (cur_chrom, BedGraph(cur_idxs, cur_values))
