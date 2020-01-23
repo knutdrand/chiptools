@@ -1,16 +1,20 @@
 import sys, os
+import numpy as np
 from .overlap import get_overlap, get_overlap_fraction
 from .bedIO import get_chroms, print_chroms, read_bedfile, read_bedgraphs
 from .signalplot import signal_plot
+from .regions import expand
 
-import numpy as np
-def signal_plot():
-    regions = read_bedfile(sys.argv[2])
+
+def do_signalplot():
+    regions = read_bedfile(open(sys.argv[2]))
     bedgraphs = read_bedgraphs(sys.stdin)
-    signal = np.zeros(1000)
+    N = 1000
+    signal = np.zeros(2*N)
     for chrom, bedgraph in bedgraphs:
-        chrom_regions = regions[chrom]
-        signal_plot(bedgraph, chrom_regions, signal)
+        print("Reading", chrom)
+        chrom_regions = expand(regions[chrom], N, N)
+        signal += signal_plot(bedgraph, chrom_regions, 2*N)
     np.save(sys.argv[3], signal)
 
 def main():
@@ -27,10 +31,5 @@ def main():
                    for chrom in data_a if chrom in data_b}
         print_chroms(overlap)
 
-    if sys.argv[1] == "signal_plot":
-        regions = read_bedfile(sys.argv[2])
-        bedgraphs = read_bedgraphs(sys.stdin)
-        signal = np.zeros(1000)
-        for chrom, bedgraph in bedgraphs:
-            chrom_regions = regions[chrom]
-            signal
+    if sys.argv[1] == "signalplot":
+        do_signalplot()

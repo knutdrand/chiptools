@@ -22,7 +22,7 @@ def print_chroms(chroms):
 def read_bedfile(lines):
     chroms = defaultdict(list)
     for line in lines:
-        chrom, start, end, direction = line.split("\t", 4)[:4]
+        chrom, start, end, _, _, direction = line.split("\t", 6)[:6]
         chroms[chrom].append((int(start), int(end), 1 if direction=="+" else -1))
     for chrom, coords in chroms.items():
         coords = np.array(coords, dtype="int")
