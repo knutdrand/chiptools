@@ -1,4 +1,4 @@
-from chiptools.bedIO import read_bedgraphs
+from chiptools.bedIO import read_bedgraphs, read_bedfile
 from chiptools import BedGraph
 
 def test_read_bedgraphs():

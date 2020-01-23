@@ -1,5 +1,6 @@
 from collections import defaultdict
 from .bedgraph import BedGraph
+from .regions import Regions
 
 import numpy as np
 dtype= [('start', np.unicode_, 16), ('grades', np.float64, (2,))]
@@ -17,6 +18,17 @@ def print_chroms(chroms):
     for chrom, lines in chroms.items():
         for line in lines:
             print(chrom+"\t"+"\t".join(str(c) for c in line))
+
+def read_bedfile(lines):
+    chroms = defaultdict(list)
+    for line in lines:
+        chrom, start, end, direction = line.split("\t", 4)[:4]
+        chroms[chrom].append((int(start), int(end), 1 if direction=="+" else -1))
+    for chrom, coords in chroms.items():
+        coords = np.array(coords, dtype="int")
+        chroms[chrom] = coords[coords[:, 0].argsort()]
+    return {chrom: Regions(coords[:, 0], coords[:, 1], coords[:, 2])
+            for chrom, coords in chroms.items()}
 
 def read_bedgraphs(lines):
     cur_chrom = None
