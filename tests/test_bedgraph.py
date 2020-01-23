@@ -6,8 +6,11 @@ def bedgraph():
 
 @pytest.fixture
 def graphdiff():
-    return GraphDiff(0, [10, 15, 25, 40], [1, 1, 1, 1])
+    return GraphDiff(0, [10, 15, 25, 40], [1, 1, 1, 1], 50)
 
+def test_scale_x(graphdiff):
+    assert graphdiff.scale_x(100) == GraphDiff(0, [20, 30, 50, 80], [1, 1, 1, 1], 100)
+    assert graphdiff.scale_x(75) == GraphDiff(0, [15, 22, 37, 60], [1, 1, 1, 1], 75)
 
 def test_getitem(bedgraph):
     values = bedgraph[[10, 11, 14, 15, 16]]

@@ -30,6 +30,18 @@ def read_bedfile(lines):
     return {chrom: Regions(coords[:, 0], coords[:, 1], coords[:, 2])
             for chrom, coords in chroms.items()}
 
+def read_peakfile(lines):
+    chroms = defaultdict(list)
+    for line in lines:
+        chrom, start, end  = line.split("\t", 3)[:3]
+        chroms[chrom].append((int(start), int(end)))
+    for chrom, coords in chroms.items():
+        coords = np.array(coords, dtype="int")
+        chroms[chrom] = coords[coords[:, 0].argsort()]
+    return {chrom: Regions(coords[:, 0], coords[:, 1], 1)
+            for chrom, coords in chroms.items()}
+
+
 def read_bedgraphs(lines):
     cur_chrom = None
     cur_idxs, cur_values = ([], [])

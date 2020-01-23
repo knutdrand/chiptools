@@ -1,10 +1,11 @@
 import numpy as np
 
 class GraphDiff:
-    def __init__(self, start_value, indices, values):
+    def __init__(self, start_value, indices, values, size=None):
         self._start_value = start_value
         self._indices = np.asanyarray(indices)
         self._values = np.asanyarray(values)
+        self._size = size
 
     def __eq__(self, other):
         t = self._start_value == other._start_value
@@ -17,6 +18,11 @@ class GraphDiff:
     def update_dense_array(self, array):
         array[0] += self._start_value
         array[self._indices] += self._values
+
+    def scale_x(self, new_size):
+        return GraphDiff(self._start_value,
+                         (self._indices*new_size/self._size).astype("int"),
+                         self._values)
 
 class BedGraph:
     def __init__(self, indices, values, size=None):
@@ -74,7 +80,7 @@ class BedGraph:
 
     def to_graph_diffs(self):
         return GraphDiff(self._values[0],
-                         self._indices[1:], np.diff(self._values))
+                         self._indices[1:], np.diff(self._values), self._size)
 
     def __getitem__(self, index):
         if isinstance(index, slice):

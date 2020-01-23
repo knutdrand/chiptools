@@ -6,9 +6,14 @@ class Regions:
     def __init__(self, starts, ends, directions=1):
         self.starts = starts
         self.ends = ends
-        self.directions = directions
+        if directions == 1:
+            self.directions=np.ones_like(self.starts)
+        else:
+            self.directions = directions
 
     def __iter__(self):
+        if self.directions == 1:
+            return (Region(s, e, 1) for s, e in zip(self.starts, self.ends))
         return (Region(*t) for t in zip(self.starts, self.ends, self.directions))
 
 def expand(regions, upstream, downstream):
