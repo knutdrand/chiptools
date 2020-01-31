@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from .overlap import get_overlap, get_overlap_fraction
 from .sizehist import get_hist, get_sizes
-
-from .bedIO import get_chroms, print_chroms, read_bedfile, read_bedgraphs, read_peakfile
+from .filterdup import filterdup
+from .bedIO import get_chroms, print_chroms, read_bedfile, read_bedgraphs, read_peakfile, read_fragments, print_regions
 from .signalplot import signal_plot
 from .regions import expand
 
@@ -69,3 +69,8 @@ def main():
         plt.savefig(sys.argv[5])
         if len(sys.argv) > 6:
             np.save(sys.argv[6], bins)
+
+    elif sys.argv[1] == "filterdup":
+        chroms = read_fragments(open(sys.argv[2]))
+        for chrom, data in chroms:
+            print_regions(chrom, filterdup(data))

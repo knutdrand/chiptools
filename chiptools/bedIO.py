@@ -42,6 +42,21 @@ def read_peakfile(lines):
             for chrom, coords in chroms.items()}
 
 
+def read_fragments(lines):
+    cur_chrom = None
+    cur_starts, cur_ends = ([], [])
+    for line in lines:
+        chrom, start, end = line.split("\t", 3)[:3]
+        if chrom != cur_chrom:
+            if cur_chrom is not None:
+                yield (cur_chrom, Regions(cur_starts, cur_ends))
+            cur_chrom = chrom
+            cur_starts, cur_ends = ([], [])
+        cur_starts.append(int(start))
+        cur_ends.append(int(end))
+    if cur_starts:
+        yield (cur_chrom, Regions(cur_starts, cur_ends))
+
 def read_bedgraphs(lines):
     cur_chrom = None
     cur_idxs, cur_values = ([], [])
@@ -56,3 +71,7 @@ def read_bedgraphs(lines):
         cur_values.append(float(value))
     if cur_idxs:
         yield (cur_chrom, BedGraph(cur_idxs, cur_values))
+
+def print_regions(chrom, regions):
+    for start, end, _ in regions:
+        print("%s\t%s\t%s" % (chrom, start, end))
