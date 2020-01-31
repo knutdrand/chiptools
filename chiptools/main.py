@@ -67,3 +67,5 @@ def main():
         plt.xlabel("size")
         plt.ylabel("count")
         plt.savefig(sys.argv[5])
+        if len(sys.argv>6):
+            np.save(sys.argv[6], bins)
