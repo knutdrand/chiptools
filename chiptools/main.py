@@ -41,6 +41,11 @@ def do_averageplot():
         plt.plot(signal)
         plt.savefig(sys.argv[4])
 
+def get_input_lines(arg):
+    if arg=="-":
+        return sys.stdin
+    return open(arg)
+
 def main():
     if sys.argv[1] == "overlap":
         data_a = get_chroms(open(sys.argv[2]))
@@ -62,7 +67,7 @@ def main():
         do_averageplot()
 
     elif sys.argv[1] == "sizehist":
-        bins = get_hist(get_sizes(open(sys.argv[2])),
+        bins = get_hist(get_sizes(get_input_lines(sys.argv[2])),
                         int(sys.argv[3]), int(sys.argv[4]))
         plt.xlabel("size")
         plt.ylabel("count")
