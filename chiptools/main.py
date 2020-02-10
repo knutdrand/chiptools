@@ -1,5 +1,6 @@
 import sys, os
 import numpy as np
+import trackhub
 import matplotlib.pyplot as plt
 from .overlap import get_overlap, get_overlap_fraction
 from .sizehist import get_hist, get_sizes
