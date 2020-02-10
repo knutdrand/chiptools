@@ -45,6 +45,7 @@ def histone_track(name, color="200,0,0"):
             name=name+"_"+signal_type,
             url="%s_%s.bigWig" % (name, signal_type),
             short_label=signal_type,
+            autoScale="on"
         )
         signal_view.add_tracks(track)
     for region_type in ["peaks", "domains"]:
