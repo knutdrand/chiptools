@@ -107,3 +107,9 @@ def main():
         trackdb.add_tracks([histone_track(*pair)
                        for pair in zip(names, colors)])
         print(trackdb)
+
+    elif sys.argv[1] == "plot":
+        names = sys.argv[2:-1]
+        lines = [plt.plot(np.load(name))[0] for name in names]
+        plt.legend(lines, [name.split(".")[0] for name in names])
+        plt.savefig(sys.argv[-1])
