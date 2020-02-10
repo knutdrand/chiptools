@@ -32,12 +32,15 @@ def do_averageplot():
     bedgraphs = read_bedgraphs(sys.stdin)
     N=2000
     signal = np.zeros(2*N)
+    total = 0
     for chrom, bedgraph in bedgraphs:
         print("Reading", chrom)
         if chrom not in regions or chrom=="chrM":
             continue
         chrom_regions = regions[chrom]
         signal += signal_plot(bedgraph, chrom_regions, 2*N, scale_to=True)
+        total+=regions[chrom].starts.size
+    signal /= total
     np.save(sys.argv[3], signal)
     if len(sys.argv)>4:
         plt.plot(signal)
