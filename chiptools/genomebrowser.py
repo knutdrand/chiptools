@@ -47,7 +47,7 @@ def histone_track(name, color="200,0,0"):
         signal_view.add_tracks(track)
     for region_type in ["peaks", "domains"]:
         track = trackhub.Track(
-            name=name+"_DEBUG"+region_type,
+            name=name+"_"+region_type,
             source="%s_%s.bigBed" %(name, region_type),
             short_label=region_type)
         regions_view.add_tracks(track)
