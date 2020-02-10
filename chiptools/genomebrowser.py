@@ -48,7 +48,7 @@ def histone_track(name, color="200,0,0"):
     for region_type in ["peaks", "domains"]:
         track = trackhub.Track(
             name=name+"_"+region_type,
-            source="%s_%s.bigBed" %(name, region_type),
+            url="%s_%s.bigBed" %(name, region_type),
             short_label=region_type)
         regions_view.add_tracks(track)
     return composite
