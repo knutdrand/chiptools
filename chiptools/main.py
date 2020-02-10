@@ -99,6 +99,7 @@ def main():
     elif sys.argv[1] == "trackdb":
         names = sys.argv[2:]
         colors = [get_color(i, len(names)) for i in range(len(names))]
-        db = trackhub.TrackDb([histone_track(*pair)
-                               for pair in zip(names, colors)])
+        db = trackhub.TrackDb()
+        db.add_tracks([histone_track(*pair)
+                       for pair in zip(names, colors)])
         print(db)
