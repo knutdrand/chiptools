@@ -4,10 +4,11 @@ import matplotlib.pyplot as plt
 from .overlap import get_overlap, get_overlap_fraction
 from .sizehist import get_hist, get_sizes
 from .filterdup import filterdup
+from .chainfile import parse_lines
 from .bedIO import get_chroms, print_chroms, read_bedfile, read_bedgraphs, read_peakfile, read_fragments, print_regions
 from .signalplot import signal_plot
 from .regions import expand
-
+from .genomebrowser import get_color, histone_track
 
 def do_tss_plot():
     regions = read_bedfile(open(sys.argv[2]))
@@ -66,6 +67,14 @@ def main():
     elif sys.argv[1] == "averageplot":
         do_averageplot()
 
+    elif sys.argv[1] == "hist":
+        sizes = [float(l.strip()) for l in get_input_lines(sys.argv[2])]
+        plt.hist(sizes, range=(0, float(sys.argv[3])), bins=int(sys.argv[4]))
+        if len(sys.argv)>5:
+            plt.savefig(sys.argv[5])
+        else:
+            plt.show()
+
     elif sys.argv[1] == "sizehist":
         bins = get_hist(get_sizes(get_input_lines(sys.argv[2])),
                         int(sys.argv[3]), int(sys.argv[4]))
@@ -79,3 +88,15 @@ def main():
         chroms = read_fragments(open(sys.argv[2]))
         for chrom, data in chroms:
             print_regions(chrom, filterdup(data))
+
+    elif sys.argv[1] == "chain":
+        input_lines = get_input_lines(sys.argv[2])
+        output_lines = parse_lines(input_lines)
+        for output_line in output_lines:
+            print("\t".join(str(c) for c in output_line))
+
+    elif sys.argv[1] == "trackdb":
+        names = sys.argv[1:]
+        colors = [get_color(i, len(names)) for i in range(len(names))]
+        for name, color in zip(names, colors):
+            print(histone_track(name, color))

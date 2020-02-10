@@ -19,5 +19,6 @@ setuptools.setup(
      ],
     entry_points = {
         'console_scripts': ['chiptools=chiptools.main:main'],
-    }
+    },
+    install_requires=['trackhub', 'numpy']
  )
