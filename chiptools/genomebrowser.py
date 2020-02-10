@@ -28,6 +28,7 @@ def histone_track(name, color="200,0,0"):
         visibility='full',
         tracktype='bigWig',
         short_label=name+'_signal',
+        autoScale="on"
     )
     regions_view = trackhub.ViewTrack(
         name=name+'_region',
