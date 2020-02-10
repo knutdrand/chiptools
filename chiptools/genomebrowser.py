@@ -33,7 +33,7 @@ def histone_track(name, color="200,0,0"):
         name=name+'_region',
         view='regions',
         visibility='dense',
-        tracktype='bigBed',
+        tracktype='bigWig',
         short_label=name+'_regions')
 
     composite.add_view(signal_view)
@@ -41,10 +41,10 @@ def histone_track(name, color="200,0,0"):
 
     for signal_type in ["qvalues", "treat_pileup", "control_lambda"]:
         track = trackhub.Track(
+            tracktype='bigWig',
             name=name+"_"+signal_type,
             url="%s_%s.bigWig" % (name, signal_type),
             short_label=signal_type,
-            tracktype='bigWig'
         )
         signal_view.add_tracks(track)
     for region_type in ["peaks", "domains"]:
