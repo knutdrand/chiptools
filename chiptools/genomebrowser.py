@@ -44,7 +44,7 @@ def histone_track(name, color="200,0,0"):
         track = trackhub.Track(
             tracktype='bigWig',
             name=name+"_"+signal_type,
-            url="%s_%s.bigWig" % (name, signal_type),
+            url="%s_%s.bw" % (name, signal_type),
             short_label=signal_type,
             autoScale="on"
         )
@@ -52,7 +52,7 @@ def histone_track(name, color="200,0,0"):
     for region_type in ["peaks", "domains"]:
         track = trackhub.Track(
             name=name+"_"+region_type,
-            url="%s_%s.bigBed" %(name, region_type),
+            url="%s_%s.bb" %(name, region_type),
             short_label=region_type,
             tracktype='bigBed')
         regions_view.add_tracks(track)
