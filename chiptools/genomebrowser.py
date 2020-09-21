@@ -57,10 +57,18 @@ def histone_track(name, color="200,0,0"):
             tracktype='bigBed')
         regions_view.add_tracks(track)
     return composite
-    
 
-    
-
+def coverage_track(name, color):
+    track = trackhub.Track(
+        tracktype='bigWig',
+        name=name,
+        url="%s.bw" % name,
+        short_label= name,
+        autoScale="on",
+        visibility='full',
+        color=color
+    )
+    return track
 
 name="test"
 bigwig="testing"

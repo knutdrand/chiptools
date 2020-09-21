@@ -16,9 +16,13 @@ def get_log_hist(sizes):
     plt.xticks(ticks, tick_values)
     return bins
 
+def get_size(p):
+    assert len(p) >= 3, p
+    return int(p[2])-int(p[1])
+
 def get_sizes(lines):
     parts = (l.split() for l in lines)
-    return (int(p[2])-int(p[1]) for p in parts)
+    return (get_size(p) for p in parts)
     
 def get_hist(sizes, n_bins=50, bin_size=1000):
     bins = np.zeros(n_bins, dtype="int")

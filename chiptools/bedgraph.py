@@ -1,4 +1,7 @@
 import numpy as np
+from collections import Counter
+from itertools import chain
+from .regions import Regions
 
 class GraphDiff:
     def __init__(self, start_value, indices, values, size=None):
@@ -25,11 +28,15 @@ class GraphDiff:
                          self._values)
 
 class BedGraph:
-    def __init__(self, indices, values, size=None):
-        assert indices[0] == 0, ("Indices does not start with 0", indices[:3])
+    def __init__(self, indices, values, size=None, strict=True):
+        assert (not strict) or indices[0] == 0, ("Indices does not start with 0", indices[:3])
         self._indices = np.asanyarray(indices)
         self._values = np.asanyarray(values)
         self._size = size
+
+    def __iter__(self):
+        pairs = zip(self._indices, chain(self._indices[1:], [self._size]))
+        return zip(pairs, self._values)
 
     def _getitem(self, index):
         idx = np.searchsorted(self._indices, index, side="right")-1
@@ -37,6 +44,20 @@ class BedGraph:
             return self._values[idx]
         else:
             return 0
+
+    def sum(self):
+        sizes = np.diff(self._indices, append=self._size)
+        return np.sum(sizes*self._values)
+
+    def mean(self):
+        assert self._indices[0]==0
+        return self.sum()/self._size
+
+    def hist(self):
+        h = np.zeros(int(np.max(self._values))+1)
+        for (start, end), value in self:
+            h[int(value)]+=(end-start)
+        return h
 
     def reverse(self):
         assert self._size is not None
@@ -58,7 +79,13 @@ class BedGraph:
                 yield new_obj.reverse()
             else:
                 yield new_obj
-        
+
+    def threshold(self, value):
+        over = self._values >= value
+        changes = np.flatnonzero(over[1:] != over[:-1])
+        starts = self._indices[changes[::2]+1]
+        ends = self._indices[changes[1::2]+1]
+        return Regions(starts, ends)
 
     def _getslice(self, slice_obj):
         assert slice_obj.step is None or slice_obj.step in (1, -1), slice_obj
