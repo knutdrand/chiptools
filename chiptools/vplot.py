@@ -9,12 +9,17 @@ def vplot(bedgraph, regions, size_x, size_y, max_size):
     for size, signal in zip(sizes, signals):
         if size>max_size:
             continue
-        graph_diffs = signal.to_graph_diffs().scale_x(size_x)
-        graph_diffs.update_dense_array(diffs[int(size/max_size*size_y)])
-        Ns[int(size/max_size*size_y)]+=1
-    return np.cumsum(diffs, axis=1), Ns
-
-
+        assert np.all(signal._values >= 0)
+        graph_diffs = signal.scale_x(size_x).to_graph_diffs()
+        graph_diffs.assert_positive()
+        row = min(int(size/max_size*size_y), diffs.shape[0])
+        assert np.all(np.cumsum(diffs[row])>=0), np.where(np.cumsum(diffs[row])<0)
+        graph_diffs.update_dense_array(diffs[row])
+        assert np.all(np.cumsum(diffs[row])>=0), (graph_diffs, np.cumsum(diffs[row]))
+        Ns[row]+=1
+    tot = np.cumsum(diffs, axis=1)
+    assert np.all(tot>=0)
+    return tot, Ns
 
 def get_heatplot(regions, bedgraphs):
     sizes = np.zeros(sum(r.starts.size for r in regions.values()))

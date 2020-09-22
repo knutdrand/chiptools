@@ -49,9 +49,9 @@ def do_signalhist():
 def do_vplot():
     regions = read_bedfile(open(sys.argv[2]))
     bedgraphs = read_bedgraphs(sys.stdin)
-    size_x=10000
+    size_x=5000
     size_y=5000
-    max_size=10000
+    max_size=50000
     signal = np.zeros((size_y, size_x))
     Ns = np.zeros(size_y)
     for chrom, bedgraph in bedgraphs:

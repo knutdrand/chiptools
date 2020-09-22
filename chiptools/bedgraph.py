@@ -7,6 +7,8 @@ class GraphDiff:
     def __init__(self, start_value, indices, values, size=None):
         self._start_value = start_value
         self._indices = np.asanyarray(indices)
+        assert np.all(np.diff(self._indices)>0), self._indices
+        assert np.all(self._indices>=0), self._indices
         self._values = np.asanyarray(values)
         self._size = size
 
@@ -19,13 +21,21 @@ class GraphDiff:
         return "GD(%s, %s, %s)" % (self._start_value, self._indices, self._values)
 
     def update_dense_array(self, array):
+        self.assert_positive()
+        assert np.all(np.cumsum(array)>=0)
         array[0] += self._start_value
+        assert self._indices.size==0 or array.size>=np.max(self._indices), (array.size, np.max(self._indices))
         array[self._indices] += self._values
+        assert np.all(np.cumsum(array)>=0), np.flatnonzero(np.cumsum(array)<0)
 
     def scale_x(self, new_size):
         return GraphDiff(self._start_value,
                          (self._indices*new_size/self._size).astype("int"),
                          self._values)
+
+    def assert_positive(self):
+        values = self._start_value + np.cumsum(self._values)
+        assert np.all(values >= 0), values
 
 class BedGraph:
     def __init__(self, indices, values, size=None, strict=True):
@@ -105,9 +115,17 @@ class BedGraph:
     def get_end_idx(position):
         return np.searchsorted(self._indices, position, side="left")
 
+    def scale_x(self, size):
+        new_indices = (self._indices*size/self._size).astype("int")
+        ds = np.concatenate((np.diff(new_indices)>0, [True]))
+        return BedGraph(new_indices[ds],
+                        self._values[ds], self._size)
+
     def to_graph_diffs(self):
-        return GraphDiff(self._values[0],
-                         self._indices[1:], np.diff(self._values), self._size)
+        gd = GraphDiff(self._values[0],
+                       self._indices[1:], np.diff(self._values), self._size)
+        gd.assert_positive()
+        return gd
 
     def __getitem__(self, index):
         if isinstance(index, slice):
