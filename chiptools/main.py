@@ -3,6 +3,11 @@ import numpy as np
 import trackhub
 import matplotlib.pyplot as plt
 import logging
+import gzip
+from collections import defaultdict
+
+from .annotation import get_coding_offsets
+from .metagene import metagene, coding_metagene
 from .regions import Regions, get_holes
 from .alignscores import alignscore
 from .overlap import get_overlap, get_overlap_fraction
@@ -10,6 +15,8 @@ from .sizehist import get_hist, get_sizes
 from .filterdup import filterdup
 from .chainfile import parse_lines
 from .bedIO import get_chroms, print_chroms, read_bedfile, read_bedgraphs, read_peakfile, read_fragments, print_regions
+from .bedgraph import BedGraph
+from .refSeqIO import parse_refseq_file
 from .signalplot import signal_plot, signal_cumulative_hist
 from .vplot import vplot, get_heatplot
 from .regions import expand
@@ -84,8 +91,41 @@ def do_heatplot():
         plt.imshow(signal, cmap='gray_r')
         plt.savefig(sys.argv[4])
 
-def do_averageplot():
-    regions = read_peakfile(open(sys.argv[2]))
+def do_metagene():
+    anno = parse_refseq_file(gzip.open(sys.argv[2], "rt"))
+    anno.filter_coding()
+    anno.filter_largest()
+    offset_dict = {a.name: get_coding_offsets(a) for a in anno._annotations}
+    #utr_l_lens = sum(o[0] for o in offset_dict.values())/len(offset_dict)
+    cds_lens = sum(o[1]-o[0] for o in offset_dict.values())/len(offset_dict)
+    utr_r_lens = sum(sum(a.exonEnds)-sum(a.exonStarts)-offset_dict[a.name][1] if a.strand==1 else offset_dict[a.name][0]
+                     for a in anno._annotations)/len(anno._annotations)
+    utr_l_lens = sum(sum(a.exonEnds)-sum(a.exonStarts)-offset_dict[a.name][1] if a.strand==-1 else offset_dict[a.name][0]
+                     for a in anno._annotations)/len(anno._annotations)
+
+    print(utr_l_lens, cds_lens, utr_r_lens)
+    chroms = anno.to_indexed_regions()
+    bedgraphs = read_bedgraphs(sys.stdin)
+    N = 1000
+    diffs = [np.zeros(s) for s in (int(N*utr_l_lens/cds_lens), N, int(N*utr_r_lens/cds_lens))]
+    for chrom, bedgraph in bedgraphs:
+        print("Reading", chrom)
+        if chrom not in chroms or chrom=="chrM":
+            continue
+        indexed_regions = chroms[chrom]
+        coding_metagene(bedgraph, indexed_regions, diffs, offset_dict)
+    t = 0
+    for d in diffs:
+        plt.plot(t+np.arange(d.size), np.cumsum(d))
+        t += d.size
+    plt.show()
+
+
+def do_averageplot(gene=False):
+    if gene:
+        regions = read_bedfile(open(sys.argv[2]))
+    else:
+        regions = read_peakfile(open(sys.argv[2]))
     bedgraphs = read_bedgraphs(sys.stdin)
     N=2000
     signal = np.zeros(2*N)
@@ -138,8 +178,8 @@ def main():
     elif sys.argv[1] == "tssplot":
         do_tss_plot()
 
-    elif sys.argv[1] == "averageplot":
-        do_averageplot()
+    elif sys.argv[1] in ("geneaverageplot", "averageplot"):
+        do_averageplot(sys.argv[1]=="geneaverageplot")
 
     elif sys.argv[1] == "vplot":
         do_vplot()
@@ -227,3 +267,6 @@ def main():
 
     elif sys.argv[1] == "regionmeans":
         do_regionmeans(sys.argv)
+
+    elif sys.argv[1] == "metagene":
+        do_metagene()

@@ -41,3 +41,8 @@ def test_get_slices(bedgraph):
              BedGraph([0, 11], [3, 2], 19)]
     for calc, t in zip(slices, true):
         assert calc == t
+
+def test_concat(bedgraph):
+    combined = BedGraph.concatenate([bedgraph, bedgraph])
+    true = BedGraph([0, 10, 15, 25, 40, 50, 60, 65, 75, 90], [0, 1, 2, 3, 4]*2, size=100)
+    assert combined == true

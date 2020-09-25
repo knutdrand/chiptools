@@ -34,7 +34,7 @@ def read_bedfile(lines):
 def read_peakfile(lines):
     chroms = defaultdict(list)
     for line in lines:
-        chrom, start, end  = line.split("\t", 3)[:3]
+        chrom, start, end  = line.strip().split("\t", 3)[:3]
         chroms[chrom].append((int(start), int(end)))
     for chrom, coords in chroms.items():
         coords = np.array(coords, dtype="int")

@@ -1,6 +1,8 @@
 import numpy as np
+import logging
 from collections import Counter
 from itertools import chain
+
 from .regions import Regions
 
 class GraphDiff:
@@ -29,6 +31,7 @@ class GraphDiff:
         assert np.all(np.cumsum(array)>=0), np.flatnonzero(np.cumsum(array)<0)
 
     def scale_x(self, new_size):
+        logging.warning("Scaling of graphs diffs is not supported. Use BedGraph.scale_x")
         return GraphDiff(self._start_value,
                          (self._indices*new_size/self._size).astype("int"),
                          self._values)
@@ -41,8 +44,13 @@ class BedGraph:
     def __init__(self, indices, values, size=None, strict=True):
         assert (not strict) or indices[0] == 0, ("Indices does not start with 0", indices[:3])
         self._indices = np.asanyarray(indices)
+        assert np.all(np.diff(self._indices)>0), indices
+        if size is not None:
+            assert np.all(self._indices<size), (self._indices, size)
+
         self._values = np.asanyarray(values)
         self._size = size
+        assert size is None or size>0
 
     def __iter__(self):
         pairs = zip(self._indices, chain(self._indices[1:], [self._size]))
@@ -78,6 +86,7 @@ class BedGraph:
         return self.__class__(indices, values, self._size)
 
     def get_slices(self, starts, ends, directions):
+        assert np.all(ends>starts)
         start_idxs = np.searchsorted(self._indices, starts, side="right")
         end_idxs = np.searchsorted(self._indices, ends, side="left")
         start_values = self._values[start_idxs-1]
@@ -100,12 +109,18 @@ class BedGraph:
 
     def _getslice(self, slice_obj):
         assert slice_obj.step is None or slice_obj.step in (1, -1), slice_obj
-        start_idx = np.searchsorted(self._indices, slice_obj.start, side="right")
-        end_idx = np.searchsorted(self._indices, slice_obj.stop, side="left")
+        start = slice_obj.start or 0
+        start_idx = np.searchsorted(self._indices, start, side="right")
+        stop = slice_obj.stop
+        if stop is None:
+            assert self._size is not None
+            stop = self._size
+        assert self._size is None or stop<=self._size, (slice_obj, self)
+        end_idx = np.searchsorted(self._indices, stop, side="left")
         start_value = self._values[start_idx-1]
-        indices = np.insert(self._indices[start_idx:end_idx]-slice_obj.start, 0, 0)
+        indices = np.insert(self._indices[start_idx:end_idx]-start, 0, 0)
         values = np.insert(self._values[start_idx:end_idx], 0, start_value)
-        new_obj = self.__class__(indices, values, slice_obj.stop-slice_obj.start)
+        new_obj = self.__class__(indices, values, stop-start)
         if slice_obj.step == -1:
             return new_obj.reverse()
         return new_obj
@@ -120,7 +135,17 @@ class BedGraph:
         new_indices = (self._indices*size/self._size).astype("int")
         ds = np.concatenate((np.diff(new_indices)>0, [True]))
         return BedGraph(new_indices[ds],
-                        self._values[ds], self._size)
+                        self._values[ds], size)
+
+    @classmethod
+    def concatenate(cls, bedgraphs):
+        offsets = np.cumsum([0] + [bg._size for bg in bedgraphs[:-1]])
+        indices = np.concatenate([bg._indices+offset for (bg, offset) in zip(bedgraphs, offsets)])
+        assert np.all(np.diff(indices)>0), (bedgraphs, indices, offsets)
+        values = np.concatenate([bg._values for bg in bedgraphs])
+        size = sum(bg._size for bg in bedgraphs)
+        assert np.all(indices<size), (size, offsets, indices)
+        return cls(indices, values, size)
 
     def to_graph_diffs(self):
         gd = GraphDiff(self._values[0],
@@ -140,4 +165,4 @@ class BedGraph:
         return t and np.all(self._values==other._values)
     
     def __repr__(self):
-        return "BG(%s, %s)" % (self._indices, self._values)
+        return "BG(%s, %s, %s)" % (self._indices, self._values, self._size)
