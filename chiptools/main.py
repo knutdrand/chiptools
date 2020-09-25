@@ -118,8 +118,7 @@ def do_metagene():
     for d in diffs:
         plt.plot(t+np.arange(d.size), np.cumsum(d))
         t += d.size
-    plt.show()
-
+    plt.savefig(sys.argv[3])
 
 def do_averageplot(gene=False):
     if gene:
