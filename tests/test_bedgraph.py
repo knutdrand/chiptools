@@ -29,3 +29,15 @@ def test_to_graph_diffs(bedgraph, graphdiff):
     
 def test_reverse(bedgraph):
     assert bedgraph.reverse() == BedGraph([0, 10, 25, 35, 40], [4, 3, 2, 1, 0], size=50)
+
+    return BedGraph([0, 10, 15, 25, 40], [0, 1, 2, 3, 4], size=50)
+def test_get_slices(bedgraph):
+    starts = [2, 13, 17]
+    ends = [12, 27, 36]
+    directions = [1, -1, -1]
+    slices = list(bedgraph.get_slices(starts, ends, directions))
+    true =  [BedGraph([0,8], [0, 1], 10),
+             BedGraph([0, 2, 12], [3, 2, 1], 14),
+             BedGraph([0, 11], [3, 2], 19)]
+    for calc, t in zip(slices, true):
+        assert calc == t

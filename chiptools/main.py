@@ -2,6 +2,7 @@ import sys, os
 import numpy as np
 import trackhub
 import matplotlib.pyplot as plt
+import logging
 from .regions import Regions, get_holes
 from .alignscores import alignscore
 from .overlap import get_overlap, get_overlap_fraction
@@ -60,6 +61,9 @@ def do_vplot():
         assert "alt" not in chrom, chrom
         print("Reading", chrom)
         chrom_regions = regions[chrom]
+        if np.all(chrom_regions.directions==1):
+            assert False
+            logging.warning(f"All {chrom_regions.directions.size} regions positive for {chrom}")
         s, Ns_tmp = vplot(bedgraph, chrom_regions, size_x, size_y, max_size)
         signal += s
         Ns += Ns_tmp

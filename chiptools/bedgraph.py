@@ -85,6 +85,7 @@ class BedGraph:
             indices = np.insert(self._indices[start_idx:end_idx]-start, 0, 0)
             values = np.insert(self._values[start_idx:end_idx], 0, start_value)
             new_obj = self.__class__(indices, values, end-start)
+            assert direction in (-1, 1)
             if direction == -1:
                 yield new_obj.reverse()
             else:

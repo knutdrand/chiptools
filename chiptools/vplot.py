@@ -12,7 +12,7 @@ def vplot(bedgraph, regions, size_x, size_y, max_size):
         assert np.all(signal._values >= 0)
         graph_diffs = signal.scale_x(size_x).to_graph_diffs()
         graph_diffs.assert_positive()
-        row = min(int(size/max_size*size_y), diffs.shape[0])
+        row = min(int(size/max_size*size_y), diffs.shape[0]-1)
         assert np.all(np.cumsum(diffs[row])>=0), np.where(np.cumsum(diffs[row])<0)
         graph_diffs.update_dense_array(diffs[row])
         assert np.all(np.cumsum(diffs[row])>=0), (graph_diffs, np.cumsum(diffs[row]))
