@@ -7,7 +7,7 @@ import gzip
 from collections import defaultdict
 
 from .annotation import get_coding_offsets
-from .metagene import metagene, coding_metagene
+from .metagene import metagene, coding_metagene, genome_metagene
 from .regions import Regions, get_holes
 from .alignscores import alignscore
 from .overlap import get_overlap, get_overlap_fraction
@@ -93,32 +93,36 @@ def do_heatplot():
 
 def do_metagene():
     anno = parse_refseq_file(gzip.open(sys.argv[2], "rt"))
-    anno.filter_coding()
-    anno.filter_largest()
-    offset_dict = {a.name: get_coding_offsets(a) for a in anno._annotations}
-    #utr_l_lens = sum(o[0] for o in offset_dict.values())/len(offset_dict)
-    cds_lens = sum(o[1]-o[0] for o in offset_dict.values())/len(offset_dict)
-    utr_r_lens = sum(sum(a.exonEnds)-sum(a.exonStarts)-offset_dict[a.name][1] if a.strand==1 else offset_dict[a.name][0]
-                     for a in anno._annotations)/len(anno._annotations)
-    utr_l_lens = sum(sum(a.exonEnds)-sum(a.exonStarts)-offset_dict[a.name][1] if a.strand==-1 else offset_dict[a.name][0]
-                     for a in anno._annotations)/len(anno._annotations)
-
-    print(utr_l_lens, cds_lens, utr_r_lens)
-    chroms = anno.to_indexed_regions()
     bedgraphs = read_bedgraphs(sys.stdin)
-    N = 1000
-    diffs = [np.zeros(s) for s in (int(N*utr_l_lens/cds_lens), N, int(N*utr_r_lens/cds_lens))]
-    for chrom, bedgraph in bedgraphs:
-        print("Reading", chrom)
-        if chrom not in chroms or chrom=="chrM":
-            continue
-        indexed_regions = chroms[chrom]
-        coding_metagene(bedgraph, indexed_regions, diffs, offset_dict)
+    # anno.filter_coding()
+    # anno.filter_largest()
+    # offset_dict = {a.name: get_coding_offsets(a) for a in anno._annotations}
+    # #utr_l_lens = sum(o[0] for o in offset_dict.values())/len(offset_dict)
+    # cds_lens = sum(o[1]-o[0] for o in offset_dict.values())/len(offset_dict)
+    # utr_r_lens = sum(sum(a.exonEnds)-sum(a.exonStarts)-offset_dict[a.name][1] if a.strand==1 else offset_dict[a.name][0]
+    #                  for a in anno._annotations)/len(anno._annotations)
+    # utr_l_lens = sum(sum(a.exonEnds)-sum(a.exonStarts)-offset_dict[a.name][1] if a.strand==-1 else offset_dict[a.name][0]
+    #                  for a in anno._annotations)/len(anno._annotations)
+    # 
+    # print(utr_l_lens, cds_lens, utr_r_lens)
+    # chroms = anno.to_indexed_regions()
+    # 
+    # N = 1000
+    # diffs = [np.zeros(s) for s in (int(N*utr_l_lens/cds_lens), N, int(N*utr_r_lens/cds_lens))]
+    # for chrom, bedgraph in bedgraphs:
+    #     print("Reading", chrom)
+    #     if chrom not in chroms or chrom=="chrM":
+    #         continue
+    #     indexed_regions = chroms[chrom]
+    #     coding_metagene(bedgraph, indexed_regions, diffs, offset_dict)
+    diffs = genome_metagene(anno, bedgraphs)
     t = 0
     for d in diffs:
+        print(t)
         plt.plot(t+np.arange(d.size), np.cumsum(d))
         t += d.size
     plt.savefig(sys.argv[3])
+    np.save(sys.argv[4], np.concatenate([np.cumsum(d) for d in diffs]))
 
 def do_averageplot(gene=False):
     if gene:
