@@ -1,4 +1,10 @@
 import numpy as np
+import logging
+from collections import namedtuple
+
+log = logging
+
+Size = namedtuple("Size", ["x", "y"])
 
 def vplot(bedgraph, regions, size_x, size_y, max_size):
     sizes = regions.ends-regions.starts
@@ -21,52 +27,39 @@ def vplot(bedgraph, regions, size_x, size_y, max_size):
     assert np.all(tot>=0)
     return tot, Ns
 
-def get_heatplot(regions, bedgraphs):
-    sizes = np.zeros(sum(r.starts.size for r in regions.values()))
-    indices = {}
-    cur_index = 0
-    for chrom, r in regions.items():
-        n = r.starts.size
-        sizes[cur_index:cur_index+n] = r.ends-r.starts
-        indices[chrom]=(cur_index, cur_index+n)
-        cur_index+=n
-
-    # sizes = np.concatenate([regions[chrom].ends-r[chrom].starts for chrom in bedgraphs
-    #                         if chrom in regions and chrom!="chrM"])
-    args_tmp = np.argsort(sizes)
+def get_ranks(array):
+    args_tmp = np.argsort(array)
     args = np.empty_like(args_tmp)
     args[args_tmp] = np.arange(len(args))
-    N = args.size
-    size_x = 10000
-    size_y = 20000
-    max_size=50000
-    signal = np.zeros((size_y, size_x))
-    Ns = np.zeros(size_y)
+    return args
+
+def get_y_coords(regions, size_y):
+    sizes = [r.ends-r.starts for _, r in regions.items()]
+    offsets = np.cumsum([0]+[len(s) for s in sizes])
+    ranks = get_ranks(np.concatenate(sizes))
+    y_coords = (ranks/ranks.size*size_y).astype("int")
+    return {chrom: y_coords[offsets[i]:offsets[i+1]] for i, chrom in enumerate(regions)}
+
+def get_heatplot(regions, bedgraphs, max_size=50000, fig_size=Size(2000, 4000)):
+    y_coords = get_y_coords(regions, fig_size.y)
+    diffs = np.zeros((fig_size.y, fig_size.x))
+    Ns = np.zeros(fig_size.y)
     for chrom, bedgraph in bedgraphs:
         if chrom not in regions or chrom=="chrM":
             continue
         assert "alt" not in chrom, chrom
-        print("Reading", chrom)
-        chrom_regions = regions[chrom]
+        log.info("Reading %s", chrom)
+        heatplot_per_chrom(bedgraph, regions[chrom], y_coords[chrom], diffs, max_size)
+        for y in y_coords[chrom]:
+            Ns[y] += 1
 
-        cur_args=args[indices[chrom][0]:indices[chrom][1]]
-        # args_index+=chrom_regions.starts.size
-        s, Ns_tmp = heatplot_per_chrom(bedgraph, chrom_regions, size_x, size_y, max_size, cur_args, N)
-        signal += s
-        Ns += Ns_tmp
-    singal = signal/(np.maximum(Ns, 1)[:, None])
+    signal = np.cumsum(diffs, axis=1)/(np.maximum(Ns, 1)[:, None])
     return signal
 
 
-def heatplot_per_chrom(bedgraph, regions, size_x, size_y, max_size, args, N):
-    sizes = regions.ends-regions.starts
-    indices = np.argsort(sizes)
-    diffs = np.zeros((size_y, size_x))
+def heatplot_per_chrom(bedgraph, regions, y_coords, diffs, max_size):
     mids = (regions.ends+regions.starts)//2
     signals = bedgraph.get_slices(mids-max_size//2, mids+max_size//2, regions.directions)
-    Ns = np.zeros(size_y)
-    for arg, signal in zip(args, signals):
-        graph_diffs = signal.scale_x(size_x).to_graph_diffs()
-        graph_diffs.update_dense_array(diffs[int(arg/N*size_y)])
-        Ns[int(arg/N*size_y)]+=1
-    return np.cumsum(diffs, axis=1), Ns
+    graph_diffs = (signal.scale_x(diffs.shape[1]).to_graph_diffs() for signal in signals)
+    for y, signal in zip(y_coords, graph_diffs):
+        signal.update_dense_array(diffs[y])

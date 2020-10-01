@@ -24,11 +24,9 @@ class GraphDiff:
 
     def update_dense_array(self, array):
         self.assert_positive()
-        assert np.all(np.cumsum(array)>=0)
         array[0] += self._start_value
         assert self._indices.size==0 or array.size>=np.max(self._indices), (array.size, np.max(self._indices))
         array[self._indices] += self._values
-        assert np.all(np.cumsum(array)>=0), np.flatnonzero(np.cumsum(array)<0)
 
     def scale_x(self, new_size):
         logging.warning("Scaling of graphs diffs is not supported. Use BedGraph.scale_x")
@@ -38,7 +36,7 @@ class GraphDiff:
 
     def assert_positive(self):
         values = self._start_value + np.cumsum(self._values)
-        assert np.all(values >= 0), values
+        assert np.all(values >= -1e-10), (values[values < -1e-10], values.dtype)
 
 class BedGraph:
     def __init__(self, indices, values, size=None, strict=True):
@@ -49,6 +47,7 @@ class BedGraph:
             assert np.all(self._indices<size), (self._indices, size)
 
         self._values = np.asanyarray(values)
+        assert np.all(self._values>=0), self._values[self._values<0]
         self._size = size
         assert size is None or size>0
 
