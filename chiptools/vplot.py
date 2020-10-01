@@ -66,7 +66,7 @@ def heatplot_per_chrom(bedgraph, regions, size_x, size_y, max_size, args, N):
     signals = bedgraph.get_slices(mids-max_size//2, mids+max_size//2, regions.directions)
     Ns = np.zeros(size_y)
     for arg, signal in zip(args, signals):
-        graph_diffs = signal.to_graph_diffs().scale_x(size_x)
+        graph_diffs = signal.scale_x(size_x).to_graph_diffs()
         graph_diffs.update_dense_array(diffs[int(arg/N*size_y)])
         Ns[int(arg/N*size_y)]+=1
     return np.cumsum(diffs, axis=1), Ns

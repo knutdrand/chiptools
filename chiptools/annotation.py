@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from itertools import groupby
 
 import numpy as np
@@ -6,7 +6,7 @@ import numpy as np
 from .regions import Regions
 
 Anno = namedtuple("Anno", ["chrom", "strand", "txStart", "txEnd",
-                           "cdsStart", "cdsEnd", "exonStarts", "exonEnds", "name"])
+                           "cdsStart", "cdsEnd", "exonStarts", "exonEnds", "name", "isoform"])
 
 def get_coding_offsets(anno):
     #assert anno.txStart<anno.cdsStart<anno.cdsEnd<anno.txEnd, anno
@@ -25,13 +25,16 @@ class Annotations:
 
     def filter_largest(self):
         groups = groupby(self._annotations, key=lambda x: x.name)
-        self._annotations =  [max(group, key=lambda x: len(x.exonStarts)) for _, group in groups]
+        self._annotations =  [max(group, key=lambda x: sum(end-start for start, end in zip(x.exonStarts, x.exonEnds))) for _, group in groups]
 
     def filter_coding(self):
         self._annotations = [anno for anno in self._annotations if anno.cdsStart!=anno.cdsEnd]
         
     def position_sort(self):
         self._annotations.sort(key=lambda x: (x.chrom, x.txStart))
+
+    def get_gene(self, name):
+        return Annotations(a for a in self._annotations if a.name==name)
 
     def to_indexed_regions(self):
         self.position_sort()
@@ -48,6 +51,14 @@ class Annotations:
             regions = Regions(starts[args], ends, directions)
             indexed_regions[chrom] = IndexedRegions(names, indexes, regions)
         return indexed_regions
+
+    def get_splice_site_dict(self):
+        splice_site_dict = defaultdict(list)
+        for anno in self._annotations:
+            for end, start in zip(anno.exonEnds[:-1], anno.exonStarts[1:]):
+                splice_site_dict[(anno.chrom, end, start)].append(anno.isoform)
+        return splice_site_dict
+        
 
 class IndexedRegions:
     def __init__(self, names, indexes, regions):

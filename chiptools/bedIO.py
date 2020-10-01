@@ -1,9 +1,16 @@
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from .bedgraph import BedGraph
 from .regions import Regions
 
 import numpy as np
 dtype= [('start', np.unicode_, 16), ('grades', np.float64, (2,))]
+
+BedEntry=namedtuple("BedEntry", ["chrom", "start", "end", "strand"])
+
+def vanillabed(lines):
+    parted = (line.split() for line in lines)
+    return (BedEntry(chrom, int(start), int(end), strand.strip())
+            for chrom, start, end, _, _, strand, *_ in parted)
 
 def get_chroms(lines):
     chroms = defaultdict(list)

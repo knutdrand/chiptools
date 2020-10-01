@@ -7,7 +7,7 @@ import gzip
 from collections import defaultdict
 
 from .annotation import get_coding_offsets
-from .metagene import metagene, coding_metagene, genome_metagene
+from .metagene import metagene, coding_metagene, genome_metagene, show_transcripts
 from .regions import Regions, get_holes
 from .alignscores import alignscore
 from .overlap import get_overlap, get_overlap_fraction
@@ -21,7 +21,7 @@ from .signalplot import signal_plot, signal_cumulative_hist
 from .vplot import vplot, get_heatplot
 from .regions import expand
 from .genomebrowser import get_color, histone_track, coverage_track
-from .rna_bam_to_bed import rna_bam_to_bed
+from .rna_bam_to_bed import rna_bam_to_bed, get_splices
 from .clipbed import clip_bed
 from .fraglen import fraglen
 
@@ -244,8 +244,14 @@ def main():
         plt.savefig(sys.argv[-1])
 
     elif sys.argv[1] == "rnabam2bed":
+        lines = (f"{chrom}\t{start}\t{end}\t.\t.\t{direction}\t{is_end}" 
+                 for chrom, start, end, direction, is_end in rna_bam_to_bed(sys.stdin))
+        for line in lines:
+            print(line)
+
+    elif sys.argv[1] == "getsplices":
         lines = (f"{chrom}\t{start}\t{end}\t.\t.\t{direction}" 
-                 for chrom, start, end, direction in rna_bam_to_bed(sys.stdin))
+                 for chrom, start, end, direction in get_splices(sys.stdin))
         for line in lines:
             print(line)
 
