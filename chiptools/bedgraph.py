@@ -28,12 +28,6 @@ class GraphDiff:
         assert self._indices.size==0 or array.size>=np.max(self._indices), (array.size, np.max(self._indices))
         array[self._indices] += self._values
 
-    def scale_x(self, new_size):
-        logging.warning("Scaling of graphs diffs is not supported. Use BedGraph.scale_x")
-        return GraphDiff(self._start_value,
-                         (self._indices*new_size/self._size).astype("int"),
-                         self._values)
-
     def assert_positive(self):
         values = self._start_value + np.cumsum(self._values)
         assert np.all(values >= -1e-10), (values[values < -1e-10], values.dtype)
@@ -63,8 +57,11 @@ class BedGraph:
             return 0
 
     def sum(self):
-        sizes = np.diff(self._indices, append=self._size)
-        return np.sum(sizes*self._values)
+        if self._size is not None:
+            sizes = np.diff(self._indices, append=self._size)
+            return np.sum(sizes*self._values)
+        assert self._values[-1] == 0, self._values[-1]
+        return np.diff(self._indices*self._values[:-1])
 
     def mean(self):
         assert self._indices[0]==0
@@ -145,6 +142,10 @@ class BedGraph:
         size = sum(bg._size for bg in bedgraphs)
         assert np.all(indices<size), (size, offsets, indices)
         return cls(indices, values, size)
+
+    def update_dense_diffs(self, diffs):
+        diffs[0]+=self._values[0]
+        diffs[self._indices[1:]]+= np.diff(self._values)
 
     def to_graph_diffs(self):
         gd = GraphDiff(self._values[0],

@@ -1,4 +1,6 @@
 import sys, os
+import cProfile
+import pstats
 import numpy as np
 import trackhub
 import matplotlib.pyplot as plt
@@ -14,32 +16,40 @@ from .overlap import get_overlap, get_overlap_fraction
 from .sizehist import get_hist, get_sizes
 from .filterdup import filterdup
 from .chainfile import parse_lines
-from .bedIO import get_chroms, print_chroms, read_bedfile, read_bedgraphs, read_peakfile, read_fragments, print_regions
+from .bedIO import get_chroms, print_chroms, read_bedfile, read_bedgraphs, read_peakfile, read_fragments, print_regions, read_bedgraphs_fast
 from .bedgraph import BedGraph
 from .refSeqIO import parse_refseq_file
 from .signalplot import signal_plot, signal_cumulative_hist
-from .vplot import vplot, get_heatplot
+from .vplot import get_vplot, get_heatplot
 from .regions import expand
 from .genomebrowser import get_color, histone_track, coverage_track
 from .rna_bam_to_bed import rna_bam_to_bed, get_splices
 from .clipbed import clip_bed
 from .fraglen import fraglen
 
+log = logging
+
 def do_tss_plot():
+    do_normalize=True
     regions = read_bedfile(open(sys.argv[2]))
-    bedgraphs = read_bedgraphs(sys.stdin)
+    bedgraphs = read_bedgraphs_fast(open(sys.argv[3]))
     N = 1000
-    signal = np.zeros(2*N)
+    diffs = np.zeros(2*N)
+    total = 0
     for chrom, bedgraph in bedgraphs:
-        if chrom not in regions or chrom=="chrM":
+        if chrom not in regions:
             continue
         print("Reading", chrom)
         chrom_regions = expand(regions[chrom], N, N)
-        signal += signal_plot(bedgraph, chrom_regions, 2*N)
-    np.save(sys.argv[3], signal)
-    if len(sys.argv)>4:
+        signal_plot(bedgraph, chrom_regions, diffs)
+        total += bedgraph.sum()
+    signal = np.cumsum(diffs)
+    if do_normalize:
+        signal/=(total/1000000)
+    np.save(sys.argv[4], signal)
+    if len(sys.argv)>5:
         plt.plot(np.arange(-N, N), signal)
-        plt.savefig(sys.argv[4])
+        plt.savefig(sys.argv[5])
 
 def do_signalhist():
     regions = read_bedfile(open(sys.argv[2]))
@@ -56,40 +66,23 @@ def do_signalhist():
 
 def do_vplot():
     regions = read_bedfile(open(sys.argv[2]))
-    bedgraphs = read_bedgraphs(sys.stdin)
-    size_x=5000
-    size_y=5000
-    max_size=50000
-    signal = np.zeros((size_y, size_x))
-    Ns = np.zeros(size_y)
-    for chrom, bedgraph in bedgraphs:
-        if chrom not in regions or chrom=="chrM":
-            continue
-        assert "alt" not in chrom, chrom
-        print("Reading", chrom)
-        chrom_regions = regions[chrom]
-        if np.all(chrom_regions.directions==1):
-            assert False
-            logging.warning(f"All {chrom_regions.directions.size} regions positive for {chrom}")
-        s, Ns_tmp = vplot(bedgraph, chrom_regions, size_x, size_y, max_size)
-        signal += s
-        Ns += Ns_tmp
-    singal = signal/(np.maximum(Ns, 1)[:, None])
-    np.save(sys.argv[3], signal)
-    if len(sys.argv)>4:
-        plt.imshow(signal, cmap='hot', interpolation='nearest')
-        plt.savefig(sys.argv[4])
+    bedgraphs = read_bedgraphs_fast(open(sys.argv[3]))
+    signal = get_vplot(regions, bedgraphs)
+    np.save(sys.argv[4], signal)
+    if len(sys.argv)>5:
+        plt.imshow(signal, cmap='gray_r') # , interpolation='nearest')
+        plt.savefig(sys.argv[5])
 
 def do_heatplot():
     regions = read_peakfile(open(sys.argv[2]))
-    bedgraphs = read_bedgraphs(sys.stdin)
+    bedgraphs = read_bedgraphs_fast(open(sys.argv[3]))
     signal = get_heatplot(regions, bedgraphs)
     # singal = signal/(np.maximum(Ns, 1)[:, None])
-    np.save(sys.argv[3], signal)
-    if len(sys.argv) > 4:
+    np.save(sys.argv[4], signal)
+    if len(sys.argv) > 5:
         plt.figure(figsize=(15, 30))
         plt.imshow(signal, cmap='gray_r')
-        plt.savefig(sys.argv[4])
+        plt.savefig(sys.argv[5])
 
 def do_metagene():
     anno = parse_refseq_file(gzip.open(sys.argv[2], "rt"))
@@ -129,9 +122,9 @@ def do_averageplot(gene=False):
         regions = read_bedfile(open(sys.argv[2]))
     else:
         regions = read_peakfile(open(sys.argv[2]))
-    bedgraphs = read_bedgraphs(sys.stdin)
+    bedgraphs = read_bedgraphs_fast(open(sys.argv[3]))
     N=2000
-    signal = np.zeros(2*N)
+    diffs = np.zeros(2*N)
     total = 0
     for chrom, bedgraph in bedgraphs:
         print("Reading", chrom)
@@ -140,13 +133,13 @@ def do_averageplot(gene=False):
         chrom_regions = regions[chrom]
         sizes = chrom_regions.ends-chrom_regions.starts
         new_regions = Regions(chrom_regions.starts-sizes/2, chrom_regions.ends+sizes/2)
-        signal += signal_plot(bedgraph, new_regions, 2*N, scale_to=True)
+        signal_plot(bedgraph, new_regions, diffs, scale_to=True)
         total+=regions[chrom].starts.size
-    signal /= total
-    np.save(sys.argv[3], signal)
-    if len(sys.argv)>4:
+    signal = np.cumsum(diffs)/total
+    np.save(sys.argv[4], signal)
+    if len(sys.argv)>5:
         plt.plot(signal)
-        plt.savefig(sys.argv[4])
+        plt.savefig(sys.argv[5])
 
 def do_regionmeans(args):
     regions = read_peakfile(open(sys.argv[2]))
@@ -185,7 +178,10 @@ def main():
         do_averageplot(sys.argv[1]=="geneaverageplot")
 
     elif sys.argv[1] == "vplot":
-        do_vplot()
+        cProfile.runctx("do_vplot()", globals(), locals(), "profiling")
+        stats = pstats.Stats("profiling")
+        stats.sort_stats("cumulative")
+        stats.print_stats()
 
     elif sys.argv[1] == "signalhist":
         do_signalhist()

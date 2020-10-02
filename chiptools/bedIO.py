@@ -1,4 +1,6 @@
 from collections import defaultdict, namedtuple
+from itertools import repeat, takewhile, chain, groupby
+from operator import itemgetter
 from .bedgraph import BedGraph
 from .regions import Regions
 
@@ -64,6 +66,18 @@ def read_fragments(lines):
         cur_ends.append(int(end))
     if cur_starts:
         yield (cur_chrom, Regions(cur_starts, cur_ends))
+
+def read_bedgraphs_fast(file_obj, size_hint=10000000):
+    chunks = (file_obj.readlines(size_hint) for _ in repeat(None))
+    chunks = takewhile(lambda x: x, chunks)
+    lines =  chain.from_iterable(chunks)
+    all_parted = (line.split("\t", 4)[:4] for line in lines)
+    for chrom, parted in groupby(all_parted, itemgetter(0)):
+        if chrom == "chrM":
+            continue
+        assert "alt" not in chrom, chrom
+        idxs, ends, values = zip(*((int(p[1]), int(p[2]), float(p[3])) for p in parted))
+        yield chrom, BedGraph(np.array(idxs, dtype="int"), np.array(values, dtype="float"), size=ends[-1])
 
 def read_bedgraphs(lines):
     cur_chrom = None
