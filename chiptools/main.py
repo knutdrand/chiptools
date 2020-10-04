@@ -19,7 +19,7 @@ from .chainfile import parse_lines
 from .bedIO import get_chroms, print_chroms, read_bedfile, read_bedgraphs, read_peakfile, read_fragments, print_regions, read_bedgraphs_fast, read_bedgraphs_pd
 from .bedgraph import BedGraph
 from .refSeqIO import parse_refseq_file
-from .signalplot import signal_plot, signal_cumulative_hist
+from .signalplot import signal_plot, signal_cumulative_hist, get_average_plot, get_tss_plot
 from .vplot import get_vplot, get_heatplot
 from .regions import expand
 from .genomebrowser import get_color, histone_track, coverage_track
@@ -30,22 +30,10 @@ from .fraglen import fraglen
 log = logging
 
 def do_tss_plot():
-    do_normalize=True
     regions = read_bedfile(open(sys.argv[2]))
-    bedgraphs = read_bedgraphs_fast(open(sys.argv[3]))
+    bedgraphs = read_bedgraphs_pd(open(sys.argv[3]))
     N = 1000
-    diffs = np.zeros(2*N)
-    total = 0
-    for chrom, bedgraph in bedgraphs:
-        if chrom not in regions:
-            continue
-        print("Reading", chrom)
-        chrom_regions = expand(regions[chrom], N, N)
-        signal_plot(bedgraph, chrom_regions, diffs)
-        total += bedgraph.sum()
-    signal = np.cumsum(diffs)
-    if do_normalize:
-        signal/=(total/1000000)
+    signal = get_tss_plot(regions, bedgraphs, N)
     np.save(sys.argv[4], signal)
     if len(sys.argv)>5:
         plt.plot(np.arange(-N, N), signal)
@@ -77,7 +65,7 @@ def do_vplot():
 
 def do_heatplot():
     regions = read_peakfile(open(sys.argv[2]))
-    bedgraphs = read_bedgraphs_fast(open(sys.argv[3]))
+    bedgraphs = read_bedgraphs_pd(open(sys.argv[3]))
     signal = get_heatplot(regions, bedgraphs)
     # singal = signal/(np.maximum(Ns, 1)[:, None])
     np.save(sys.argv[4], signal)
@@ -124,20 +112,8 @@ def do_averageplot(gene=False):
         regions = read_bedfile(open(sys.argv[2]))
     else:
         regions = read_peakfile(open(sys.argv[2]))
-    bedgraphs = read_bedgraphs_fast(open(sys.argv[3]))
-    N=2000
-    diffs = np.zeros(2*N)
-    total = 0
-    for chrom, bedgraph in bedgraphs:
-        print("Reading", chrom)
-        if chrom not in regions or chrom=="chrM":
-            continue
-        chrom_regions = regions[chrom]
-        sizes = chrom_regions.ends-chrom_regions.starts
-        new_regions = Regions(chrom_regions.starts-sizes/2, chrom_regions.ends+sizes/2)
-        signal_plot(bedgraph, new_regions, diffs, scale_to=True)
-        total+=regions[chrom].starts.size
-    signal = np.cumsum(diffs)/total
+    bedgraphs = read_bedgraphs_pd(open(sys.argv[3]))
+    signal = get_average_plot(bedgraphs, regions)
     np.save(sys.argv[4], signal)
     if len(sys.argv)>5:
         plt.plot(signal)

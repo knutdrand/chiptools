@@ -68,7 +68,6 @@ def get_heatplot(regions, bedgraphs, max_size=50000, fig_size=Size(2000, 4000)):
         total+=bedgraph.sum()
         if chrom not in regions:
             continue
-        log.info("Reading %s", chrom)
         heatplot_per_chrom(bedgraph, regions[chrom], y_coords[chrom], diffs, max_size)
         for y in y_coords[chrom]:
             Ns[y] += 1
@@ -82,6 +81,7 @@ def get_heatplot(regions, bedgraphs, max_size=50000, fig_size=Size(2000, 4000)):
 def heatplot_per_chrom(bedgraph, regions, y_coords, diffs, max_size):
     mids = (regions.ends+regions.starts)//2
     signals = bedgraph.get_slices(mids-max_size//2, mids+max_size//2, regions.directions)
-    graph_diffs = (signal.scale_x(diffs.shape[1]).to_graph_diffs() for signal in signals)
-    for y, signal in zip(y_coords, graph_diffs):
-        signal.update_dense_array(diffs[y])
+    signals.scale_x(diffs.shape[1]).update_dense_diffs(diffs, y_coords)
+    # graph_diffs = (signal.scale_x(diffs.shape[1]).to_graph_diffs() for signal in signals)
+    # for y, signal in zip(y_coords, graph_diffs):
+    #     signal.update_dense_array(diffs[y])

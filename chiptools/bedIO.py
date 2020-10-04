@@ -74,8 +74,6 @@ def read_bedgraphs_pd(file_obj, size_hint=1000000):
     reader = pd.read_table(file_obj, names=["chrom", "start", "end", "value"], usecols=[0, 1, 2, 3], chunksize=size_hint)
     chunks = []
     for chunk in reader:
-        log.info("Reading chunk (%s->%s)", chunk["chrom"].iloc[0], chunk["chrom"].iloc[-1])
-        log.info(chunk["chrom"].values.dtype)
         while chunk["chrom"].iloc[-1] != cur_chrom:
             idx = np.argmax(chunk["chrom"].values!=cur_chrom)
             chunks.append(chunk.iloc[:idx])

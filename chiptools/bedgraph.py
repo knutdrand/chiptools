@@ -244,28 +244,17 @@ class BedGraphArray:
         self._offsets = offsets
 
     def scale_x(self, size):
-        assert np.issubdtype(self._indices.dtype, np.integer), self._indices
-        sizes = np.zeros_like(self._indices)
-        sizes[0] = self._sizes[0]
-        sizes[self._offsets[1:-1]] = np.diff(self._sizes)
-        new_indices = (self._indices*size//np.cumsum(sizes))
-        assert np.issubdtype(new_indices.dtype, np.integer), (self._indices, size, self._size)
+        all_sizes=broadcast(self._sizes, self._offsets)
+        new_indices = (self._indices*size//all_sizes)
         mask = np.concatenate((np.diff(new_indices)>0, [True]))
         mask[self._offsets[1:]-1] = True
         counts = np.cumsum(mask)
         new_offsets = np.insert(counts[self._offsets[1:]-1], 0, 0)
         return BedGraphArray(new_indices[mask], self._values[mask], size*np.ones_like(self._sizes), new_offsets)
 
-    def _broadcast(self, values):
-        assert values.size == self._offsets.size-1, (values.size, self._offsets.size)
-        broadcasted = np.zeros_like(self._indices, dtype=values.dtype)
-        broadcasted[self._offsets[1:-1]] = np.diff(values)
-        broadcasted[0] = values[0]
-        return np.cumsum(broadcasted)
-
     def update_dense_diffs(self, diffs, rows):
         ncols = diffs.shape[1]
-        all_rows = self._broadcast(rows)
+        all_rows = broadcast(rows, self._offsets)
         composite_indexes = all_rows*ncols + self._indices
         args = np.argsort(composite_indexes, kind="mergesort")
         indices = composite_indexes[args]
@@ -277,6 +266,23 @@ class BedGraphArray:
         total_diffs = np.diff(totals)
         used_indices = indices[index_changes]
         diffs[used_indices//ncols, used_indices % ncols] += total_diffs
+
+    def col_sum(self):
+        assert np.all(self._sizes==self._sizes[0]), self._sizes
+        args = np.argsort(self._indices, kind="mergesort")
+        indices = self._indices[args]
+        index_changes = np.insert(indices[:-1] != indices[1:], indices.size-1, True)
+
+        value_diffs = np.insert(np.diff(self._values), 0, self._values[0])[args]
+        value_diffs[:self._offsets.size-1] = self._values[self._offsets[:-1]]
+        values = np.cumsum(value_diffs)[index_changes]
+        indices = indices[index_changes]
+        return BedGraph(indices, values, size=self._sizes[0])
+
+    def sum(self, axis=None):
+        assert axis in (1, None)
+        if axis == 1:
+            return self.col_sum()
 
     def __getitem__(self, idx):
         assert idx<self._offsets.size-1
