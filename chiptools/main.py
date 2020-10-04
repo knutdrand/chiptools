@@ -16,7 +16,7 @@ from .overlap import get_overlap, get_overlap_fraction
 from .sizehist import get_hist, get_sizes
 from .filterdup import filterdup
 from .chainfile import parse_lines
-from .bedIO import get_chroms, print_chroms, read_bedfile, read_bedgraphs, read_peakfile, read_fragments, print_regions, read_bedgraphs_fast
+from .bedIO import get_chroms, print_chroms, read_bedfile, read_bedgraphs, read_peakfile, read_fragments, print_regions, read_bedgraphs_fast, read_bedgraphs_pd
 from .bedgraph import BedGraph
 from .refSeqIO import parse_refseq_file
 from .signalplot import signal_plot, signal_cumulative_hist
@@ -65,9 +65,11 @@ def do_signalhist():
     np.save(sys.argv[3], H)
 
 def do_vplot():
-    regions = read_bedfile(open(sys.argv[2]))
-    bedgraphs = read_bedgraphs_fast(open(sys.argv[3]))
-    signal = get_vplot(regions, bedgraphs)
+    f = read_peakfile if "--undirected" in sys.argv else read_bedfile
+    regions = f(open(sys.argv[2]))
+    bedgraphs = read_bedgraphs_pd(open(sys.argv[3]))
+    max_size = int(sys.argv[-1]) if sys.argv[-2]=="-s" else 50000
+    signal = get_vplot(regions, bedgraphs, max_size)
     np.save(sys.argv[4], signal)
     if len(sys.argv)>5:
         plt.imshow(signal, cmap='gray_r') # , interpolation='nearest')
@@ -181,7 +183,7 @@ def main():
         cProfile.runctx("do_vplot()", globals(), locals(), "profiling")
         stats = pstats.Stats("profiling")
         stats.sort_stats("cumulative")
-        stats.print_stats()
+        # stats.print_stats()
 
     elif sys.argv[1] == "signalhist":
         do_signalhist()

@@ -7,7 +7,7 @@ from .annotation import get_coding_offsets
 
 def metagene(bedgraph, indexed_regions, diffs):
     regions = indexed_regions.regions
-    signals = bedgraph.get_slices(regions.starts, regions.ends, regions.directions)
+    signals = bedgraph.get_slices_normal(regions.starts, regions.ends, regions.directions)
     exons = defaultdict(list)
     directions = defaultdict(list)
     for idx, direction in zip(indexed_regions.indexes, regions.directions):
@@ -26,7 +26,7 @@ def metagene(bedgraph, indexed_regions, diffs):
 
 def coding_metagene(bedgraph, indexed_regions, diffs, offset_dict):
     regions = indexed_regions.regions
-    signals = bedgraph.get_slices(regions.starts, regions.ends, regions.directions)
+    signals = bedgraph.get_slices_normal(regions.starts, regions.ends, regions.directions)
     exons = defaultdict(list)
     directions = defaultdict(list)
     for idx, direction in zip(indexed_regions.indexes, regions.directions):
@@ -109,7 +109,7 @@ def show_transcripts(annotation, bedgraph, name):
     chrom = list(indexed_regions.keys())[0]
     indexed_regions = indexed_regions[chrom]
     regions = indexed_regions.regions
-    signals = bedgraph.get_slices(regions.starts, regions.ends, regions.directions)
+    signals = bedgraph.get_slices_normal(regions.starts, regions.ends, regions.directions)
     exons = defaultdict(list)
     directions = defaultdict(list)
     for idx, direction in zip(indexed_regions.indexes, regions.directions):

@@ -8,6 +8,7 @@ def bedgraph():
 def graphdiff():
     return GraphDiff(0, [10, 15, 25, 40], [1, 1, 1, 1], 50)
 
+@pytest.mark.skip
 def test_scale_x(graphdiff):
     assert graphdiff.scale_x(100) == GraphDiff(0, [20, 30, 50, 80], [1, 1, 1, 1], 100)
     assert graphdiff.scale_x(75) == GraphDiff(0, [15, 22, 37, 60], [1, 1, 1, 1], 75)
@@ -31,11 +32,12 @@ def test_reverse(bedgraph):
     assert bedgraph.reverse() == BedGraph([0, 10, 25, 35, 40], [4, 3, 2, 1, 0], size=50)
 
     return BedGraph([0, 10, 15, 25, 40], [0, 1, 2, 3, 4], size=50)
+
 def test_get_slices(bedgraph):
     starts = [2, 13, 17]
     ends = [12, 27, 36]
     directions = [1, -1, -1]
-    slices = list(bedgraph.get_slices(starts, ends, directions))
+    slices = list(bedgraph.get_slices_normal(starts, ends, directions))
     true =  [BedGraph([0,8], [0, 1], 10),
              BedGraph([0, 2, 12], [3, 2, 1], 14),
              BedGraph([0, 11], [3, 2], 19)]

@@ -19,11 +19,27 @@ def get_vplot(regions, bedgraphs, max_size=50000, fig_size=Size(2000, 2000)):
 
     return np.cumsum(diffs, axis=1)/(np.maximum(Ns, 1)[:, None])/total*1000000
 
-def vplot(bedgraph, regions, diffs, max_size, Ns):
+def vplot_(bedgraph, regions, diffs, max_size, Ns):
     rows = ((regions.ends-regions.starts)/max_size*diffs.shape[0]).astype("int")
     mask = rows<diffs.shape[0]
     mids = (regions.ends[mask]+regions.starts[mask])//2
-    signals = bedgraph.get_slices(mids-max_size//2, mids+max_size//2, regions.directions[mask])
+    bedgraph.get_slices(mids-max_size//2, mids+max_size//2, regions.directions[mask]).scale_x(diffs.shape[1]).update_dense_diffs(diffs, rows[mask])
+    rows, counts = np.unique(rows[mask], return_counts=True)
+    Ns[rows]+=counts
+    # for row in rows[mask]:
+    # Ns[row] += 1
+    #for row, signal in zip(rows[mask], signals):
+    # assert np.all(signal._values >= 0)
+    # signal.update_dense_diffs(diffs[row])
+
+def vplot(bedgraph, regions, diffs, max_size, Ns):
+    rows = ((regions.ends-regions.starts)/max_size*diffs.shape[0]).astype("int")
+    mask = rows<diffs.shape[0]
+    print(mask.dtype, mask)
+    mids = (regions.ends[mask]+regions.starts[mask])//2
+    print(regions.directions)
+    dirs = regions.directions[mask]
+    signals = bedgraph.get_slices_normal(mids-max_size//2, mids+max_size//2, dirs)#regions.directions[mask])# .scale_x(diffs.shape[1])
     for row, signal in zip(rows[mask], signals):
         assert np.all(signal._values >= 0)
         signal.scale_x(diffs.shape[1]).update_dense_diffs(diffs[row])

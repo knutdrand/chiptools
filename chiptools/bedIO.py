@@ -1,14 +1,16 @@
 from collections import defaultdict, namedtuple
 from itertools import repeat, takewhile, chain, groupby
+import logging
 from operator import itemgetter
 from .bedgraph import BedGraph
 from .regions import Regions
 
 import numpy as np
+import pandas as pd
 dtype= [('start', np.unicode_, 16), ('grades', np.float64, (2,))]
 
 BedEntry=namedtuple("BedEntry", ["chrom", "start", "end", "strand"])
-
+log = logging
 def vanillabed(lines):
     parted = (line.split() for line in lines)
     return (BedEntry(chrom, int(start), int(end), strand.strip())
@@ -66,6 +68,30 @@ def read_fragments(lines):
         cur_ends.append(int(end))
     if cur_starts:
         yield (cur_chrom, Regions(cur_starts, cur_ends))
+
+def read_bedgraphs_pd(file_obj, size_hint=1000000):
+    cur_chrom=None
+    reader = pd.read_table(file_obj, names=["chrom", "start", "end", "value"], usecols=[0, 1, 2, 3], chunksize=size_hint)
+    chunks = []
+    for chunk in reader:
+        log.info("Reading chunk (%s->%s)", chunk["chrom"].iloc[0], chunk["chrom"].iloc[-1])
+        log.info(chunk["chrom"].values.dtype)
+        while chunk["chrom"].iloc[-1] != cur_chrom:
+            idx = np.argmax(chunk["chrom"].values!=cur_chrom)
+            chunks.append(chunk.iloc[:idx])
+            if cur_chrom is not None:
+                log.info("Yielding chrom %s", cur_chrom)
+                yield cur_chrom, BedGraph(np.concatenate([c["start"].values for c in chunks]),
+                                          np.concatenate([c["value"].values for c in chunks]),
+                                          chunks[-1]["end"].values[-1])
+                chunks = []
+            chunk = chunk.iloc[idx:]
+            cur_chrom = chunk["chrom"].iloc[0]
+        chunks.append(chunk)
+    yield cur_chrom, BedGraph(np.concatenate([c["start"].values for c in chunks]),
+                              np.concatenate([c["value"].values for c in chunks]),
+                              chunks[-1]["end"].values[-1])
+
 
 def read_bedgraphs_fast(file_obj, size_hint=10000000):
     chunks = (file_obj.readlines(size_hint) for _ in repeat(None))

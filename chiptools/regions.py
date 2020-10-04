@@ -16,7 +16,7 @@ class Regions:
         if isinstance(directions, int) and directions == 1:
             self.directions=np.ones_like(self.starts)
         else:
-            self.directions = directions
+            self.directions = np.asanyarray(directions)
 
     def __iter__(self):
         if isinstance(self, int) and self.directions == 1:

@@ -1,5 +1,5 @@
 import pytest
-
+import numpy as np
 from chiptools.vplot import vplot
 from chiptools import Regions, BedGraph
 
@@ -14,6 +14,8 @@ def graph():
                     [0, 1]*(len(indices)//2) + [0], size=600)
 
 def test_vplot(regions, graph):
-    p = vplot(graph, regions, 6, 6, 6)
+    diffs = np.zeros((6, 6))
+    Ns = np.zeros(6)
+    p = vplot(graph, regions, diffs, 6, Ns)
     print(p)
     # assert False
