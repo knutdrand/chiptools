@@ -103,7 +103,6 @@ class BedGraph:
         directions = np.asanyarray(directions)
         start_idxs = np.searchsorted(self._indices, starts, side="right")-1
         end_idxs = np.searchsorted(self._indices, ends, side="left")
-        # print(list(zip(start_idxs, end_idxs)))
         offsets = np.insert(np.cumsum(end_idxs-start_idxs), 0, 0)
         slice_indexes=self._get_slice_indexes(start_idxs, end_idxs, directions, offsets)
         values = self._values[slice_indexes]
@@ -115,27 +114,6 @@ class BedGraph:
         all_ends = broadcast(ends, offsets)
         transformed_indices = np.where(all_directions==1, indices-all_starts, all_ends-indices)
         transformed_indices[offsets[:-1]]=0
-        #print(ends-starts)
-        # nfor f, e in zip(offsets[:10], offsets[1:11]):
-        #    print(indices[f:e], transformed_indices[f:e])
-        
-        # assert np.all(slice_indexes>=0)
-        # assert np.all(slice_indexes<=self._values.size), (slice_indexes[slice_indexes>=self._values.size], self._values.size)
-        # 
-        # print("---")
-        # for f, e in zip(offsets[:10], offsets[1:11]):
-        #     print(values[f:e])
-        # start_diffs = np.zeros_like(slice_indexes)
-        # start_diffs[offsets[1:-1]] = np.diff(starts)
-        # start_diffs[0] = starts[0]
-        # indices = np.insert(self._indices, self._indices.size, self._size)[slice_indexes]-np.cumsum(start_diffs)
-        # sizes = ends-starts
-        # indices[offsets[:-1]] = np.where(directions==1, 0, sizes-1)
-        # print("---")
-        # for f, e in zip(offsets[:10], offsets[1:11]):
-        #     print(indices[f:e])
-        # assert np.all(np.where(directions==1, 0, sizes-1)>=0)
-        # assert np.all(indices>=0)# ,  (indices, np.flatnonzero(indices<0), offsets)
         return BedGraphArray(transformed_indices, values, ends-starts, offsets)
 
     def get_slices_normal(self, starts, ends, directions):
@@ -288,15 +266,7 @@ class BedGraphArray:
     def update_dense_diffs(self, diffs, rows):
         ncols = diffs.shape[1]
         all_rows = self._broadcast(rows)
-        set_a = set(rows.flatten())
-        set_b = set(all_rows.flatten())
-        assert set_a==set_b, (set_a-set_a, set_b-set_a)
-        assert np.all(self._indices < ncols)
-        assert np.all(self._indices >= 0), self._indices
         composite_indexes = all_rows*ncols + self._indices
-        assert np.all(composite_indexes//ncols==all_rows), (composite_indexes//ncols, all_rows)
-        set_b = set((composite_indexes//ncols).flatten())
-        assert set_a==set_b, (set_a-set_a, set_b-set_a)
         args = np.argsort(composite_indexes, kind="mergesort")
         indices = composite_indexes[args]
         index_changes = np.insert(indices[:-1] != indices[1:], indices.size-1, True)
@@ -306,11 +276,7 @@ class BedGraphArray:
         totals = np.insert(np.cumsum(value_diffs)[index_changes], 0, 0)
         total_diffs = np.diff(totals)
         used_indices = indices[index_changes]
-        set_a = set(rows.flatten())
-        set_b = set((used_indices//ncols).flatten())
-        assert set_a==set_b, (set_a-set_a, set_b-set_a)
         diffs[used_indices//ncols, used_indices % ncols] += total_diffs
-
 
     def __getitem__(self, idx):
         assert idx<self._offsets.size-1

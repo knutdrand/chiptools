@@ -183,7 +183,7 @@ def main():
         cProfile.runctx("do_vplot()", globals(), locals(), "profiling")
         stats = pstats.Stats("profiling")
         stats.sort_stats("cumulative")
-        # stats.print_stats()
+        stats.print_stats()
 
     elif sys.argv[1] == "signalhist":
         do_signalhist()
