@@ -37,7 +37,7 @@ def test_get_slices(bedgraph):
     starts = [2, 13, 17]
     ends = [12, 27, 36]
     directions = [1, -1, -1]
-    slices = list(bedgraph.get_slices_normal(starts, ends, directions))
+    slices = list(bedgraph.get_slices(starts, ends, directions))
     true =  [BedGraph([0,8], [0, 1], 10),
              BedGraph([0, 2, 12], [3, 2, 1], 14),
              BedGraph([0, 11], [3, 2], 19)]

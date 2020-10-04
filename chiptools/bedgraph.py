@@ -5,6 +5,12 @@ from itertools import chain
 
 from .regions import Regions
 
+def broadcast(values, offsets):
+    broadcasted = np.zeros(offsets[-1], dtype=values.dtype)
+    broadcasted[offsets[1:-1]] = np.diff(values)
+    broadcasted[0] = values[0]
+    return np.cumsum(broadcasted)
+
 class GraphDiff:
     def __init__(self, start_value, indices, values, size=None):
         self._start_value = start_value
@@ -84,39 +90,53 @@ class BedGraph:
         return self.__class__(indices, values, self._size)
 
     def _get_slice_indexes(self, start_idxs, end_idxs, directions, offsets):
-        index_diffs = np.zeros(offsets[-1], dtype="int")
-        index_diffs[offsets[1:-1]] = np.diff(directions)
-        index_diffs[0] = directions[0]
-        index_diffs = np.cumsum(index_diffs)
-        left_idxs = np.where(directions==1, start_idxs-1, end_idxs)#?
+        all_directions = broadcast(directions, offsets)
+        left_idxs = np.where(directions==1, start_idxs, end_idxs-1)#?
         right_idxs = np.where(directions==1, end_idxs-1, start_idxs)#?
-        index_diffs[offsets[1:-1]] = left_idxs[1:]-right_idxs[:-1]# np.diff(left_idxs)
-        index_diffs[0] = left_idxs[0]
-        return np.cumsum(index_diffs)
+        all_directions[offsets[1:-1]] = left_idxs[1:]-right_idxs[:-1]# np.diff(left_idxs)
+        all_directions[0] = left_idxs[0]
+        return np.cumsum(all_directions)
 
     def get_slices(self, starts, ends, directions):
-        start_idxs = np.searchsorted(self._indices, starts, side="right")
+        starts=np.asanyarray(starts)
+        ends = np.asanyarray(ends)
+        directions = np.asanyarray(directions)
+        start_idxs = np.searchsorted(self._indices, starts, side="right")-1
         end_idxs = np.searchsorted(self._indices, ends, side="left")
-        offsets = np.insert(np.cumsum(end_idxs-start_idxs+1), 0, 0)
+        print(list(zip(start_idxs, end_idxs)))
+        offsets = np.insert(np.cumsum(end_idxs-start_idxs), 0, 0)
         slice_indexes=self._get_slice_indexes(start_idxs, end_idxs, directions, offsets)
-        print(starts[:10], ends[:10], directions[:10])
-        print(start_idxs[:10], end_idxs[:10], directions[:10])
+        values = self._values[slice_indexes]
+        all_directions = broadcast(directions, offsets)
+        slice_indexes[all_directions==-1] += 1
+        indices = self._indices[slice_indexes]
+
+        all_starts = broadcast(starts, offsets)
+        all_ends = broadcast(ends, offsets)
+        transformed_indices = np.where(all_directions==1, indices-all_starts, all_ends-indices)
+        transformed_indices[offsets[:-1]]=0
+        print(ends-starts)
         for f, e in zip(offsets[:10], offsets[1:11]):
-            print(slice_indexes[f:e])
-        assert np.all(slice_indexes>=0)
-        assert np.all(slice_indexes<=self._values.size), (slice_indexes[slice_indexes>=self._values.size], self._values.size)
-        values = np.insert(self._values, self._values.size, 0)[slice_indexes]
-        start_diffs = np.zeros_like(slice_indexes)
-        start_diffs[offsets[1:-1]] = np.diff(starts)
-        start_diffs[0] = starts[0]
-        indices = np.insert(self._indices, self._indices.size, self._size)[slice_indexes]-np.cumsum(start_diffs)
-        sizes = ends-starts
-        indices[offsets[:-1]] = np.where(directions==1, 0, sizes-1)
-        for f, e in zip(offsets[:10], offsets[1:11]):
-            print(indices[f:e])
-        assert np.all(np.where(directions==1, 0, sizes-1)>=0)
-        assert np.all(indices>=0)# ,  (indices, np.flatnonzero(indices<0), offsets)
-        return BedGraphArray(indices, values, ends-starts, offsets)
+            print(indices[f:e], transformed_indices[f:e])
+        
+        # assert np.all(slice_indexes>=0)
+        # assert np.all(slice_indexes<=self._values.size), (slice_indexes[slice_indexes>=self._values.size], self._values.size)
+        # 
+        # print("---")
+        # for f, e in zip(offsets[:10], offsets[1:11]):
+        #     print(values[f:e])
+        # start_diffs = np.zeros_like(slice_indexes)
+        # start_diffs[offsets[1:-1]] = np.diff(starts)
+        # start_diffs[0] = starts[0]
+        # indices = np.insert(self._indices, self._indices.size, self._size)[slice_indexes]-np.cumsum(start_diffs)
+        # sizes = ends-starts
+        # indices[offsets[:-1]] = np.where(directions==1, 0, sizes-1)
+        # print("---")
+        # for f, e in zip(offsets[:10], offsets[1:11]):
+        #     print(indices[f:e])
+        # assert np.all(np.where(directions==1, 0, sizes-1)>=0)
+        # assert np.all(indices>=0)# ,  (indices, np.flatnonzero(indices<0), offsets)
+        return BedGraphArray(transformed_indices, values, ends-starts, offsets)
 
     def get_slices_normal(self, starts, ends, directions):
         start_idxs = np.searchsorted(self._indices, starts, side="right")
@@ -136,9 +156,11 @@ class BedGraph:
         for start_idx, end_idx, direction, start, end, offset in zip(start_idxs, end_idxs, directions, starts, ends, offsets):
             S = end_idx-start_idx
             if direction == 1:
+                print(start_idx, end_idx)
                 all_idxs[offset-S:offset] = self._indices[start_idx:end_idx]-start
                 all_values[offset-S:offset] = self._values[start_idx:end_idx]
             else:
+                print(start_idx, end_idx)
                 all_idxs[offset-S:offset] = end-self._indices[start_idx:end_idx][::-1]
                 all_values[offset-S-1:offset-1] = self._values[start_idx:end_idx][::-1]
             yield self.__class__(all_idxs[offset-S-1:offset],
