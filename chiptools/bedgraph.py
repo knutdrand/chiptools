@@ -103,21 +103,21 @@ class BedGraph:
         directions = np.asanyarray(directions)
         start_idxs = np.searchsorted(self._indices, starts, side="right")-1
         end_idxs = np.searchsorted(self._indices, ends, side="left")
-        print(list(zip(start_idxs, end_idxs)))
+        # print(list(zip(start_idxs, end_idxs)))
         offsets = np.insert(np.cumsum(end_idxs-start_idxs), 0, 0)
         slice_indexes=self._get_slice_indexes(start_idxs, end_idxs, directions, offsets)
         values = self._values[slice_indexes]
         all_directions = broadcast(directions, offsets)
         slice_indexes[all_directions==-1] += 1
-        indices = self._indices[slice_indexes]
+        indices = np.insert(self._indices, self._indices.size, self._size)[slice_indexes]
 
         all_starts = broadcast(starts, offsets)
         all_ends = broadcast(ends, offsets)
         transformed_indices = np.where(all_directions==1, indices-all_starts, all_ends-indices)
         transformed_indices[offsets[:-1]]=0
-        print(ends-starts)
-        for f, e in zip(offsets[:10], offsets[1:11]):
-            print(indices[f:e], transformed_indices[f:e])
+        #print(ends-starts)
+        # nfor f, e in zip(offsets[:10], offsets[1:11]):
+        #    print(indices[f:e], transformed_indices[f:e])
         
         # assert np.all(slice_indexes>=0)
         # assert np.all(slice_indexes<=self._values.size), (slice_indexes[slice_indexes>=self._values.size], self._values.size)
