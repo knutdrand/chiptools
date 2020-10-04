@@ -18,7 +18,9 @@ setuptools.setup(
         "Operating System :: OS Independent",
      ],
     entry_points = {
-        'console_scripts': ['chiptools=chiptools.main:main'],
+        'console_scripts': ['chiptools=chiptools.main:main',
+                            'chipplots=chiptools.plot_cli:main',
+        ],
     },
     install_requires=['trackhub', 'numpy', 'cigar', 'matplotlib']
  )
